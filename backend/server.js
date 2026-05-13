@@ -3,8 +3,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const axios = require('axios'); 
+const path = require('path'); // ADDED: Required to find the React build folder
 const Project = require('./models/Project');
-const CompanyDefaults = require('./models/CompanyDefaults'); // Uses the expanded parameter model
+const CompanyDefaults = require('./models/CompanyDefaults'); 
 
 require('dotenv').config();
 
@@ -15,7 +16,6 @@ app.use(bodyParser.json());
 
 // ------------------------------------------
 // 1. MONGODB CONNECTION
-// NOTE: Ensure your IP is whitelisted in MongoDB Atlas for this to work.
 // ------------------------------------------
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
@@ -40,8 +40,6 @@ app.post('/api/project', async (req, res) => {
 app.post('/api/defaults/:companyId', async (req, res) => {
   const companyId = req.params.companyId;
   try {
-    // Find and update, or create if it doesn't exist (upsert)
-    // This allows saving all the expanded parameters defined in the model.
     const defaults = await CompanyDefaults.findOneAndUpdate(
       { companyId: companyId },
       req.body,
@@ -58,22 +56,23 @@ app.get('/api/defaults/:companyId', async (req, res) => {
   const companyId = req.params.companyId;
   try {
     const defaults = await CompanyDefaults.findOne({ companyId: companyId });
-    // Return an empty object if not found; frontend will use system defaults
     res.json(defaults || {}); 
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
+// ------------------------------------------
+// 3. API GATEWAY ROUTES (Forward to Python)
+// ------------------------------------------
 
-// ------------------------------------------
-// 3. API GATEWAY ROUTES (Forward to Python: http://localhost:8000)
-// ------------------------------------------
+// ADDED: Use environment variable for Python AI, fallback to localhost for local dev
+const PYTHON_URL = process.env.PYTHON_URL || 'http://localhost:8000';
 
 // A. AI Imputation (AI Auto-Fill)
 app.post('/api/impute', async (req, res) => {
     try {
-        const pythonResponse = await axios.post('http://localhost:8000/impute', req.body);
+        const pythonResponse = await axios.post(`${PYTHON_URL}/impute`, req.body);
         res.json(pythonResponse.data);
     } catch (error) {
         console.error('Error calling Python AI model for imputation:', error.response ? error.response.data : error.message);
@@ -84,7 +83,7 @@ app.post('/api/impute', async (req, res) => {
 // B. Simulation Run
 app.post('/api/simulate', async (req, res) => {
     try {
-        const pythonResponse = await axios.post('http://localhost:8000/simulate', req.body);
+        const pythonResponse = await axios.post(`${PYTHON_URL}/simulate`, req.body);
         res.json(pythonResponse.data);
     } catch (error) {
         console.error('Error calling Python AI model for simulation:', error.response ? error.response.data : error.message);
@@ -95,7 +94,7 @@ app.post('/api/simulate', async (req, res) => {
 // C. PDF Report Generation
 app.post('/api/report', async (req, res) => {
     try {
-        const pythonResponse = await axios.post('http://localhost:8000/report', req.body, {
+        const pythonResponse = await axios.post(`${PYTHON_URL}/report`, req.body, {
             responseType: 'arraybuffer' 
         });
 
@@ -109,6 +108,20 @@ app.post('/api/report', async (req, res) => {
     }
 });
 
+// ------------------------------------------
+// 4. REACT FRONTEND HOSTING (Added for combined deployment)
+// ------------------------------------------
 
+// Tell Express to serve the static files from your React build
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Catch-all route: If the user requests a route that isn't an API, send the React frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
+// ------------------------------------------
+// SERVER START
+// ------------------------------------------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
