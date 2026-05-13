@@ -11,6 +11,7 @@
     color: #f1f5f9; /* slate-100 */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 
@@ -30,3 +31,160 @@
 .animate-fadeIn {
   animation: fadeIn 0.6s ease-out forwards;
 }
+
+/* --- New Premium Loading Animations --- */
+@layer utilities {
+  @keyframes loadingLine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .animate-loadingLine {
+    animation: loadingLine 2s infinite cubic-bezier(0.65, 0, 0.35, 1);
+  }
+}
+
+/* Smooth fade-out for the preloader */
+.preloader-fade-out {
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+  pointer-events: none;
+}
+
+/* Vertical dividers for column groups */
+.group-divider-right {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Faint background shifts for better scanning */
+.bg-group-alt {
+  background-color: rgba(255, 255, 255, 0.03); /* Increased slightly for better contrast */
+}
+
+.min-w-custom {
+  min-width: 1500px; 
+}
+
+/* Premium Scrollbar for the horizontal scroll */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(45, 212, 191, 0.3); /* Teal glow */
+  border-radius: 10px;
+}
+
+.group-divider-right {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+.bg-group-alt {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Enhanced info icon design */
+.tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  font-size: 9px;
+  border-radius: 50%;
+  border: 1px solid rgba(94, 234, 212, 0.3);
+  color: #5eead4;
+  cursor: help;
+  transition: all 0.2s;
+  flex-shrink: 0; /* Prevents icon from squishing */
+}
+
+.tooltip-trigger:hover {
+  background: #5eead4;
+  color: #0f172a;
+}
+
+/* Update your FeatureCard styles in LCADashboard.jsx or index.css */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Add a subtle scanline effect to make it look technical */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+  z-index: 9999;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+/* index.css additions */
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 12s linear infinite;
+}
+
+/* Enhances the "Neural" glow effect */
+.shadow-teal-glow {
+  box-shadow: 0 0 30px -5px rgba(45, 212, 191, 0.4);
+}
+
+/* Deep 3D Shadow for Dashboard Cards */
+.simulation-card-glow {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Make Chart.js Legends look cleaner */
+.chart-container canvas {
+    filter: drop-shadow(0 0 10px rgba(45, 212, 191, 0.1));
+}
+
+/* Button Pulse Animation */
+@keyframes buttonPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.4); }
+    70% { transform: scale(1.02); box-shadow: 0 0 20px 10px rgba(45, 212, 191, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(45, 212, 191, 0); }
+}
+
+/* Print Styles to make the HQ Report look clean */
+@media print {
+  /* Force dark backgrounds to white and text to black for the PDF */
+  #dashboard-print-zone {
+    background: white !important;
+    color: #1e293b !important;
+    padding: 20px !important;
+  }
+  
+  /* Ensure charts are visible on white paper */
+  canvas {
+    filter: brightness(0.8) contrast(1.2) !important;
+    max-height: 300px !important;
+  }
+
+  /* Hide the UI buttons from the final report */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Force rounded cards to have visible borders on paper */
+  .print-card {
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    page-break-inside: avoid;
+  }
+}
+
+/* Ensure FontAwesome is available for the icons */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');

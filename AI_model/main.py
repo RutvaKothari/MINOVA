@@ -6,13 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import pandas as pd
 import io
+import google.generativeai as genai
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+from utils import get_smart_defaults
 
 # --- FastAPI App Initialization ---
 app = FastAPI(title="LCA Simulation and Report API")
+genai.configure(api_key="YOUR_GEMINI_API_KEY_HERE")
 
 # Configure CORS (Crucial for frontend communication)
 app.add_middleware(
@@ -26,6 +29,7 @@ app.add_middleware(
 # --- Pydantic Models (Corrected for Row-Oriented Input) ---
 
 class LCASingleRowData(BaseModel):
+    material_name: Optional[str] = None
     weight_kg: Optional[float] = None
     recycled_content: Optional[float] = None
     energy_extraction: Optional[float] = None
@@ -84,42 +88,46 @@ def get_default_imputation_values(custom_defaults: Optional[CustomDefaults]) -> 
 
 def fill_missing_values(df: pd.DataFrame, defaults: Dict[str, float]) -> pd.DataFrame:
     """
-    Fills missing values using both custom factors and mean imputation.
+    Fills missing values using Smart Database lookup, custom factors, and mean imputation.
     """
     df = df.copy()
     
-    # Rename columns to match the snake_case used in the functions below
+    # Rename columns to match snake_case
     df.columns = [col.lower() for col in df.columns]
 
-    # Convert all possible numeric columns to float, coercing errors to NaN
-    # This prepares the data for imputation and prevents string-related errors later.
+    # Convert numeric columns to float
     for col in df.columns:
-        if col not in ['transport_mode', 'eol_method']:
+        if col not in ['transport_mode', 'eol_method', 'material_name']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
+    # --- NEW Strategy: Smart Database Imputation (AI Logic) ---
+    # This checks our JSON database for CO2 factors based on material name
+    if 'co2_extraction' in df.columns:
+        for index, row in df.iterrows():
+            if pd.isnull(row['co2_extraction']):
+                mat_name = row.get('material_name')
+                # get_smart_defaults comes from your utils.py
+                factor = get_smart_defaults(mat_name) if mat_name else defaults["co2_kwh_ext"]
+                
+                weight = row.get('weight_kg', 0.0)
+                df.at[index, 'co2_extraction'] = weight * factor
 
-    # --- Strategy 1: Factor-based Imputation (using Custom Defaults) ---
-    # Impute missing manufacturing CO2 using the custom factor (energy_manufacturing * CO2 factor)
-    
-    # Impute missing energy_manufacturing using average (if the field is missing)
+    # --- Strategy 1: Factor-based Imputation (Manufacturing & Transport) ---
     df['energy_manufacturing'].fillna(defaults["avg_energy_ext"] * 0.05, inplace=True) 
 
-    # Impute missing co2_manufacturing using the custom factor
     missing_co2_man = df['co2_manufacturing'].isnull()
     df.loc[missing_co2_man, 'co2_manufacturing'] = df.loc[missing_co2_man, 'energy_manufacturing'] * defaults["co2_kwh_man"]
 
-    # Impute missing transport cost using the custom factor
     missing_transport_cost = df['transport_cost'].isnull()
     df.loc[missing_transport_cost, 'transport_cost'] = df.loc[missing_transport_cost, 'transport_km'] * defaults["transport_cost_km"]
     
     # --- Strategy 2: Simple Imputation (Mean/Mode as Last Resort) ---
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-    
     for col in numeric_cols:
         if df[col].isnull().any():
             df[col].fillna(df[col].mean(), inplace=True)
     
+    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
     for col in categorical_cols:
         if df[col].isnull().any():
             df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else 'unknown', inplace=True)

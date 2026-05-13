@@ -5,7 +5,7 @@ import viteLogo from '/vite.svg'
 import LCADashboard from './components/LCADashboard'
 function App() {
   const [count, setCount] = useState(0)
-
+  
   return (
     <>
      <LCADashboard/>
