@@ -116,7 +116,7 @@ app.post('/api/report', async (req, res) => {
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Catch-all route: If the user requests a route that isn't an API, send the React frontend
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
